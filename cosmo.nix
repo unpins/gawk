@@ -15,7 +15,6 @@
 { unpins-lib }:
 pkgs:
 let
-  cs = import "${unpins-lib.outPath}/cosmocc.nix" { pkgs = pkgs.buildPackages; };
   cosmoPkgs = unpins-lib.lib.cosmoStaticCross pkgs;
 
   patched = cosmoPkgs.gawk.overrideAttrs (oa: {
@@ -27,19 +26,13 @@ let
       # Drop the awk → gawk symlink — withAliases re-embeds it
       rm -f $out/bin/awk
     '';
-
-    postFixup = (oa.postFixup or "") + ''
-      ${cs.cosmocc}/bin/apelink \
-        -V ${toString cs.platformBits.windows} \
-        -o $out/bin/gawk.exe \
-        $out/bin/gawk
-      rm -f $out/bin/gawk
-    '';
   });
+
+  apelinked = unpins-lib.lib.cosmoApelink pkgs { binName = "gawk"; } patched;
 in
 unpins-lib.lib.withAliases cosmoPkgs
   {
     primary = "gawk.exe";
     aliases = [ "awk" ];
   }
-  patched
+  apelinked
