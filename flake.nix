@@ -24,13 +24,14 @@
   # `awk` is registered as an UNPIN_META alias; gawk doesn't switch behaviour
   # on argv[0], so both names invoke the same binary.
   #
-  # Windows routed through Cosmopolitan (`windowsCosmo = true`) because
-  # mingw cross of gawk hits gnulib POSIX gaps similar to bash/coreutils.
+  # Windows routed through Cosmopolitan (`windowsBuild = import ./cosmo.nix
+  # …`) because mingw cross of gawk hits gnulib POSIX gaps similar to
+  # bash/coreutils. Per-binary cosmo recipe inline in `./cosmo.nix`.
   outputs = { self, unpins-lib }:
     unpins-lib.lib.mkStandaloneFlake {
       inherit self;
       name = "gawk";
-      windowsCosmo = true;
+      windowsBuild = import ./cosmo.nix { inherit unpins-lib; };
       smoke = [ "--version" ];
       smokePattern = "GNU Awk";
       build = pkgs:
