@@ -28,11 +28,12 @@ let
     '';
   });
 
-  apelinked = unpins-lib.lib.cosmoApelink pkgs { binName = "gawk"; } patched;
 in
+# `gawk` → `gawk.exe` happens automatically via the cosmo cross
+# stdenv's apelink setup hook.
 unpins-lib.lib.withAliases cosmoPkgs
   {
     primary = "gawk.exe";
     aliases = [ "awk" ];
   }
-  apelinked
+  patched
