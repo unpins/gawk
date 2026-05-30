@@ -11,7 +11,7 @@ Part of the [unpins](https://unpins.org) project — native single-binary builds
 
 ## Usage
 
-The package ships one executable, `gawk`. `unpin install` materializes an `awk` shim next to it; gawk doesn't switch behaviour on argv[0], so both names invoke the same binary.
+The package ships one executable, `gawk`. `unpin gawk` materializes an `awk` shim next to it; gawk doesn't switch behaviour on argv[0], so both names invoke the same binary.
 
 ```bash
 gawk 'BEGIN { print "hello world" }'
@@ -50,6 +50,10 @@ nix build github:unpins/gawk
 ```
 
 The first invocation will offer to add the [unpins.cachix.org](https://unpins.cachix.org) substituter so most pulls come pre-built.
+
+## Man pages
+
+`gawk.1` (and its `awk` alias) plus `pm-gawk.1` (the persistent-memory feature) are embedded in the binary — read with `unpin man gawk`. `gawkbug.1` is excluded; the `gawkbug` script isn't shipped.
 
 ## Manual download
 
