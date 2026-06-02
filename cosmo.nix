@@ -25,6 +25,10 @@ let
       rmdir "$out/lib" 2>/dev/null || true
       # Drop the awk → gawk symlink — withAliases re-embeds it
       rm -f $out/bin/awk
+      # Drop gawkbug.1 (gawkbug isn't shipped) so the .exe harvests exactly
+      # gawk + awk + pm-gawk — the same curated set as native. gawk is
+      # multi-output under cosmo too, so the page lives in the `man` output.
+      rm -f "$man/share/man/man1/gawkbug.1"* "$out/share/man/man1/gawkbug.1"*
     '';
   });
 
