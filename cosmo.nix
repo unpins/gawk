@@ -20,6 +20,14 @@ let
   patched = cosmoPkgs.gawk.overrideAttrs (oa: {
     configureFlags = (oa.configureFlags or [ ]) ++ [ "--disable-extensions" ];
 
+    # cosmocc 4.0.2's libc exports the BSD `err()` (libcosmo.a(err.o)). gawk's
+    # msg.c defines its own `err`, so the cosmo link fails with "multiple
+    # definition of `err'". gawk references only its own `err` (linked first,
+    # from msg.o), so let the linker keep that one. Windows-only; native/musl
+    # don't pull cosmo libc. Carried on NIX_CFLAGS_LINK so it reaches only the
+    # $CC-driven final link, never a direct `ld -r`.
+    NIX_CFLAGS_LINK = (oa.NIX_CFLAGS_LINK or "") + " -Wl,--allow-multiple-definition";
+
     postInstall = (oa.postInstall or "") + ''
       rm -rf "$out/libexec" "$out/share/awk" "$out/lib/gawk"
       rmdir "$out/lib" 2>/dev/null || true

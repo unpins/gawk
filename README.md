@@ -11,13 +11,19 @@ Part of the [unpins](https://unpins.org) project — native single-binary builds
 
 ## Usage
 
-The package ships one executable, `gawk`. `unpin gawk` materializes an `awk` shim next to it; gawk doesn't switch behaviour on argv[0], so both names invoke the same binary.
+Run the `gawk` program with [unpin](https://github.com/unpins/unpin):
 
 ```bash
-gawk 'BEGIN { print "hello world" }'
-awk -F: '{ print $1 }' /etc/passwd
-gawk 'NR > 1 { sum += $3 } END { print sum }' data.csv
+unpin gawk '{print $1}' file
 ```
+
+To install it onto your PATH:
+
+```bash
+unpin install gawk
+```
+
+`unpin install gawk` also creates an `awk` command.
 
 ### Bundled scope
 
@@ -27,20 +33,6 @@ To keep the single-binary contract, this build:
 - **omits the awklib helper scripts** (`passwd.awk`, `group.awk`, `ftrans.awk`, …) and the `grcat`/`pwcat` helpers under `libexec/awk/`. These are rarely used and would need a separate companion file.
 
 The core AWK language (POSIX + the GNU extensions: `gensub`, multidimensional arrays, `length(array)`, etc.) is fully functional.
-
-## Installation
-
-Install with [unpin](https://github.com/unpins/unpin):
-
-```bash
-unpin gawk
-```
-
-Or run without installing:
-
-```bash
-unpin run gawk
-```
 
 ## Build locally
 
