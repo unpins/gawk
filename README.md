@@ -1,13 +1,13 @@
 # gawk
 
-Standalone build of [GNU awk](https://www.gnu.org/software/gawk/) (Gawk), the GNU implementation of the AWK programming language.
+[GNU awk](https://www.gnu.org/software/gawk/) (Gawk), the GNU implementation of the AWK programming language. A single self-contained binary, built natively for Linux, macOS, and Windows.
 
 [![CI](https://github.com/unpins/gawk/actions/workflows/gawk.yml/badge.svg)](https://github.com/unpins/gawk/actions)
 ![Linux](https://img.shields.io/badge/Linux-%E2%9C%93-success?logo=linux&logoColor=white)
 ![macOS](https://img.shields.io/badge/macOS-%E2%9C%93-success?logo=apple&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-%E2%9C%93-success?logo=windows&logoColor=white)
 
-Part of the [unpins](https://unpins.org) project — native single-binary builds with no third-party runtime dependencies.
+Part of the [unpins](https://unpins.org) catalog; install it with [`unpin`](https://github.com/unpins/unpin): `unpin install gawk`.
 
 ## Usage
 
@@ -34,6 +34,10 @@ To keep the single-binary contract, this build:
 
 The core AWK language (POSIX + the GNU extensions: `gensub`, multidimensional arrays, `length(array)`, etc.) is fully functional.
 
+## Man pages
+
+`gawk.1` (and its `awk` alias) plus `pm-gawk.1` (the persistent-memory feature) are embedded in the binary — read with `unpin man gawk`. `gawkbug.1` is excluded; the `gawkbug` script isn't shipped.
+
 ## Build locally
 
 ```bash
@@ -42,10 +46,6 @@ nix build github:unpins/gawk
 ```
 
 The first invocation will offer to add the [unpins.cachix.org](https://unpins.cachix.org) substituter so most pulls come pre-built.
-
-## Man pages
-
-`gawk.1` (and its `awk` alias) plus `pm-gawk.1` (the persistent-memory feature) are embedded in the binary — read with `unpin man gawk`. `gawkbug.1` is excluded; the `gawkbug` script isn't shipped.
 
 ## Manual download
 
