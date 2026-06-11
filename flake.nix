@@ -1,5 +1,5 @@
 {
-  description = "Standalone build of GNU awk";
+  description = "GNU awk as a single self-contained binary";
 
   nixConfig = {
     extra-substituters = [ "https://unpins.cachix.org" ];
