@@ -39,13 +39,29 @@
     unpins-lib.lib.mkStandaloneFlake {
       inherit self;
       name = "gawk";
+
+      # Build via the unpin-llvm engine + emit a bitcode multicall module.
+      engine = "unpin-llvm";
+      multicall = {
+        programs = [{ name = "gawk"; aliases = [ "awk" ]; }];
+      };
       windowsBuild = import ./cosmo.nix { inherit unpins-lib; };
       smoke = [ "--version" ];
       smokePattern = "GNU Awk";
       build = pkgs:
         let
+          readline = pkgs.pkgsStatic.readline;
+          # Ship gawk WITH readline (debugger line-editing + history). nixpkgs'
+          # `interactive = true` would also run the test suite, drop the `man`
+          # output, and keep `gawkbug` — a bash-shebanged helper that is both a
+          # second executable and a bash store-path ref. So keep the lean
+          # `interactive = false` packaging and just turn readline on by hand.
+          # readline's ncurses is leak-free via nix-lib's terminfo fix.
           prepared = (pkgs.pkgsStatic.gawk.override { interactive = false; }).overrideAttrs (old: {
-            configureFlags = (old.configureFlags or [ ]) ++ [ "--disable-extensions" ];
+            buildInputs = (old.buildInputs or [ ]) ++ [ readline ];
+            configureFlags =
+              (builtins.filter (f: f != "--without-readline") (old.configureFlags or [ ]))
+              ++ [ "--with-readline=${readline.dev}" "--disable-extensions" ];
             postInstall = (old.postInstall or "") + ''
               rm -rf "$out/libexec" "$out/share/awk" "$out/lib/gawk"
               rmdir "$out/lib" 2>/dev/null || true
