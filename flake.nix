@@ -58,6 +58,11 @@
           # `interactive = false` packaging and just turn readline on by hand.
           # readline's ncurses is leak-free via nix-lib's terminfo fix.
           prepared = (pkgs.pkgsStatic.gawk.override { interactive = false; }).overrideAttrs (old: {
+            # Don't wire the native suite: gawk's `make check` shells out to
+            # `locale`/`more` and expects a UTF-8 locale, none present in the
+            # static-musl sandbox (`interactive = false` already keeps it off;
+            # explicit here so the judgment is recorded).
+            doCheck = false;
             buildInputs = (old.buildInputs or [ ]) ++ [ readline ];
             configureFlags =
               (builtins.filter (f: f != "--without-readline") (old.configureFlags or [ ]))

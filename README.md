@@ -34,6 +34,11 @@ To keep the single-binary contract, this build:
 
 The core AWK language (POSIX + the GNU extensions: `gensub`, multidimensional arrays, `length(array)`, etc.) is fully functional.
 
+Two more notes:
+
+- **Windows** is built through [Cosmopolitan](https://github.com/jart/cosmopolitan), not mingw — a mingw cross of gawk hits the same gnulib POSIX gaps as bash/coreutils.
+- **The native `make check` is not wired.** gawk's testsuite shells out to `locale` and `more` and expects a UTF-8 locale, none of which exist in the static-musl build sandbox. The core language is exercised by the release smoke test instead.
+
 ## Man pages
 
 `gawk.1` (and its `awk` alias) plus `pm-gawk.1` (the persistent-memory feature) are embedded in the binary — read with `unpin man gawk`. `gawkbug.1` is excluded; the `gawkbug` script isn't shipped.
