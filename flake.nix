@@ -70,9 +70,9 @@
             postInstall = (old.postInstall or "") + ''
               rm -rf "$out/libexec" "$out/share/awk" "$out/lib/gawk"
               rmdir "$out/lib" 2>/dev/null || true
-              # `awk → gawk` symlink shipped by upstream; lib.withAliases re-embeds
-              # it via UNPIN_META, so drop the file artifact to keep the release
-              # tarball at exactly one executable.
+              # `awk → gawk` symlink shipped by upstream; the shipped binary
+              # carries `awk` as an embedded alias (multicall.programs), so drop
+              # the file artifact to keep the release tarball at one executable.
               rm -f "$out/bin/awk"
               # Drop gawkbug.1 — gawkbug isn't shipped. gawk is multi-output, so
               # the pages live in the `man` output (where withMan harvests),
@@ -82,11 +82,6 @@
             '';
           });
         in
-        unpins-lib.lib.withAliases pkgs
-          {
-            primary = "gawk";
-            aliases = [ "awk" ];
-          }
-          prepared;
+        prepared;
     };
 }
