@@ -31,7 +31,9 @@ let
     postInstall = (oa.postInstall or "") + ''
       rm -rf "$out/libexec" "$out/share/awk" "$out/lib/gawk"
       rmdir "$out/lib" 2>/dev/null || true
-      # Drop the awk → gawk symlink — withAliases re-embeds it
+      # Drop the awk → gawk symlink — the shipped .exe announces `awk` from
+      # the declared `multicall.programs`, so a symlink here is a second source
+      # for the same fact.
       rm -f $out/bin/awk
       # Drop gawkbug.1 (gawkbug isn't shipped) so the .exe harvests exactly
       # gawk + awk + pm-gawk — the same curated set as native. gawk is
@@ -43,9 +45,4 @@ let
 in
 # `gawk` → `gawk.exe` happens automatically via the cosmo cross
 # stdenv's apelink setup hook.
-unpins-lib.lib.withAliases cosmoPkgs
-  {
-    primary = "gawk.exe";
-    aliases = [ "awk" ];
-  }
-  patched
+patched
