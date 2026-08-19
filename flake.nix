@@ -44,6 +44,14 @@
       engine = "unpin-llvm";
       multicall = {
         programs = [{ name = "gawk"; aliases = [ "awk" ]; }];
+        # gawk bakes its own base $out into the default AWKPATH/AWKLIBPATH and
+        # the locale dir. None of those directories exist even in the base (it
+        # installs no `lib/gawk` and no `share/awk`), so the paths are dead — but
+        # Nix still counts them as runtime refs and drags the base build, and
+        # through its compiler wrapper the whole toolchain. Two spellings because
+        # the base is named per platform (`-static-<triple>` natively,
+        # `-x86_64-unknown-cosmo-gnu` for the APE), same as bash and zsh.
+        removeReferences = [ "gawk-static" "gawk-x86_64-unknown-cosmo" ];
       };
       windowsBuild = import ./cosmo.nix { inherit unpins-lib; };
       smoke = [ "--version" ];
