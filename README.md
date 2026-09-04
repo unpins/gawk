@@ -55,3 +55,11 @@ The first invocation will offer to add the [unpins.cachix.org](https://unpins.ca
 ## Manual download
 
 The [Releases](https://github.com/unpins/gawk/releases) page has standalone binaries for manual download.
+
+## Build notes
+
+- **Aliases:** `unpin install gawk` also creates `awk`.
+- **Windows** uses [Cosmopolitan](https://justine.lol/cosmopolitan/), not mingw: gawk's Windows support lives in a separate `pc/` port (its own `popen`, sockets and header forwards) that the ordinary configure path does not wire in, so a mingw build would mean maintaining a second one.
+- **Line editing** in the `--debug` prompt is on for Linux and macOS (readline) and off on Windows, where cosmo ships no readline.
+- **Not shipped:** `gawkbug` (a shell script for filing bug reports) and the loadable extensions, both outside the single-binary model. `pm-gawk` is not a separate program — it is gawk's persistent-memory mode, and its page is embedded.
+- **Tests:** gawk's `make check` is not run; it shells out to `locale`/`more` and expects a UTF-8 locale, none of which the build sandbox has.

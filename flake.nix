@@ -84,8 +84,8 @@
               rm -f "$out/bin/awk"
               # Drop gawkbug.1 — gawkbug isn't shipped. gawk is multi-output, so
               # the pages live in the `man` output (where withMan harvests),
-              # not $out. Keeps the embedded set (gawk + awk + pm-gawk) matching
-              # winManRoot above.
+              # not $out. Keeps the embedded set at gawk + awk + pm-gawk, the
+              # same set the cosmo build harvests for the .exe.
               rm -f "$man/share/man/man1/gawkbug.1"* "$out/share/man/man1/gawkbug.1"*
             '';
           });
