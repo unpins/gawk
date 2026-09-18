@@ -25,19 +25,15 @@ unpin install gawk
 
 `unpin install gawk` also creates an `awk` command.
 
-### Bundled scope
+### What is not included
 
-To keep the single-binary contract, this build:
+- **Loadable extensions** (`@load "filefuncs"`, `@load "readdir"`, …) are not
+  available. If you depend on them, use your distribution's gawk.
+- **The awklib helper scripts** (`passwd.awk`, `group.awk`, `ftrans.awk`, …) and
+  the `grcat`/`pwcat` helpers are not included.
 
-- **disables dynamic extensions** (`@load "filefuncs"`, `@load "readdir"`, etc.). These are upstream's `.so`/`.dll` plugin modules that require `dlopen`/`LoadLibrary` — incompatible with statically-linked single-file releases. If you depend on extensions, build gawk from source or use your distribution's package.
-- **omits the awklib helper scripts** (`passwd.awk`, `group.awk`, `ftrans.awk`, …) and the `grcat`/`pwcat` helpers under `libexec/awk/`. These are rarely used and would need a separate companion file.
-
-The core AWK language (POSIX + the GNU extensions: `gensub`, multidimensional arrays, `length(array)`, etc.) is fully functional.
-
-Two more notes:
-
-- **Windows** is built through [Cosmopolitan](https://github.com/jart/cosmopolitan), not mingw — a mingw cross of gawk hits the same gnulib POSIX gaps as bash/coreutils.
-- **The native `make check` is not wired.** gawk's testsuite shells out to `locale` and `more` and expects a UTF-8 locale, none of which exist in the static-musl build sandbox. The core language is exercised by the release smoke test instead.
+The AWK language itself — POSIX plus the GNU extensions (`gensub`,
+multidimensional arrays, `length(array)`, …) — is complete.
 
 ## Man pages
 
