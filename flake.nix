@@ -68,8 +68,9 @@
               (builtins.filter (f: f != "--without-readline") (old.configureFlags or [ ]))
               ++ [ "--with-readline=${readline.dev}" "--disable-extensions" ];
             # Embedded man set, here and in ./cosmo.nix: gawk + its awk alias +
-            # pm-gawk (the binary has the PMA persistent-memory feature that page
-            # documents); gawkbug.1 goes because gawkbug isn't shipped.
+            # pm-gawk (the PMA persistent-memory feature that page documents,
+            # built on 64-bit Linux and macOS only); gawkbug.1 goes because
+            # gawkbug isn't shipped.
             postInstall = (old.postInstall or "") + ''
               rm -rf "$out/libexec" "$out/share/awk" "$out/lib/gawk"
               rmdir "$out/lib" 2>/dev/null || true

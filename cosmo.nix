@@ -8,8 +8,6 @@
 #     for the single-binary contract AND collides with cosmo's stdlib.h
 #     declaration of BSD `index()` shadowed by `static int index = -1;` in
 #     extension/stack.c. `--disable-extensions` skips the subbuild.
-#   * cosmocc lacks <readline/readline.h>; configure picks `--without-readline`
-#     fine.
 #
 # apelink -V 4 strips the polyglot down to PE32+ for the .exe deliverable.
 { unpins-lib }:
