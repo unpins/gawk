@@ -21,21 +21,13 @@
   #
   # `--disable-extensions` skips the extension/ subbuild entirely. We then
   # drop libexec/ and share/awk so the published artifact is gawk-only.
-  # `awk` is registered as an UNPIN_META alias; gawk doesn't switch behaviour
+  # `awk` is an embedded alias (`unpin/aliases`); gawk doesn't switch behaviour
   # on argv[0], so both names invoke the same binary.
   #
-  # Windows routed through Cosmopolitan (`windowsBuild = import ./cosmo.nix
-  # …`) because mingw cross of gawk hits gnulib POSIX gaps similar to
-  # bash/coreutils. Per-binary cosmo recipe inline in `./cosmo.nix`.
+  # Windows goes through Cosmopolitan (./cosmo.nix): gawk's own Windows port
+  # (`pc/`) is not something its configure wires in, so a mingw build would
+  # have to replicate it by hand.
   outputs = { self, unpins-lib }:
-    let
-      # Curated man set embedded on every platform: gawk + its awk alias +
-      # pm-gawk (the shipped binary has the PMA persistent-memory feature that
-      # page documents). gawkbug.1 is dropped on every target — we don't ship
-      # the gawkbug script. Each build (native AND the cosmo .exe) harvests its
-      # OWN `man` output after the gawkbug.1 removal (native postInstall below,
-      # cosmo postInstall in ./cosmo.nix), so no graft is needed.
-    in
     unpins-lib.lib.mkStandaloneFlake {
       inherit self;
       name = "gawk";
@@ -75,6 +67,9 @@
             configureFlags =
               (builtins.filter (f: f != "--without-readline") (old.configureFlags or [ ]))
               ++ [ "--with-readline=${readline.dev}" "--disable-extensions" ];
+            # Embedded man set, here and in ./cosmo.nix: gawk + its awk alias +
+            # pm-gawk (the binary has the PMA persistent-memory feature that page
+            # documents); gawkbug.1 goes because gawkbug isn't shipped.
             postInstall = (old.postInstall or "") + ''
               rm -rf "$out/libexec" "$out/share/awk" "$out/lib/gawk"
               rmdir "$out/lib" 2>/dev/null || true
