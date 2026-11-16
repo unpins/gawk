@@ -18,7 +18,10 @@ let
   cosmoPkgs = unpins-lib.lib.cosmoStaticCross pkgs;
 
   patched = cosmoPkgs.gawk.overrideAttrs (oa: {
-    configureFlags = (oa.configureFlags or [ ]) ++ [ "--disable-extensions" ];
+    buildInputs = (oa.buildInputs or [ ]) ++ [ cosmoPkgs.readline cosmoPkgs.ncurses ];
+    configureFlags =
+      (builtins.filter (f: f != "--without-readline") (oa.configureFlags or [ ]))
+      ++ [ "--with-readline=${cosmoPkgs.readline.dev}" "--disable-extensions" ];
 
     # cosmocc 4.0.2's libc exports the BSD `err()` (libcosmo.a(err.o)). gawk's
     # msg.c defines its own `err`, so the cosmo link fails with "multiple
