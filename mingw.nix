@@ -44,12 +44,13 @@ cross.stdenv.mkDerivation {
     runHook postBuild
   '';
 
-  # Embedded man set as on the other targets: gawk + pm-gawk (gawkbug isn't
-  # shipped).
+  # Embedded man set as on the other targets: gawk, its awk alias (a link, as
+  # upstream's install makes it) and pm-gawk; gawkbug isn't shipped.
   installPhase = ''
     runHook preInstall
     install -Dm755 gawk.exe $out/bin/gawk.exe
     install -Dm644 -t $man/share/man/man1 doc/gawk.1 doc/pm-gawk.1
+    ln -s gawk.1 $man/share/man/man1/awk.1
     runHook postInstall
   '';
 
