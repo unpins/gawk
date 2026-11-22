@@ -1,0 +1,23 @@
+# pc/popen.c #undef-s the popen/pclose macros the mingw-w64 headers map to
+# _popen/_pclose, then calls the bare names: undeclared on any compiler that
+# rejects implicit declarations (clang, gcc >= 14). Call the CRT names.
+--- a/pc/popen.c
++++ b/pc/popen.c
+@@ -232,7 +232,7 @@
+     strncpy(curmode, mode, 3); curmode[3] = '\0';
+ 
+ #if defined(__MINGW32__)
+-    current = popen(command, mode);
++    current = _popen(command, mode);
+     cur = fileno(current);
+     strcpy(pipes[cur].pmode, curmode);
+     return(current);
+@@ -278,7 +278,7 @@
+     int fd, rval;
+ 
+ #if defined(__MINGW32__)
+-    rval = pclose(current);
++    rval = _pclose(current);
+     *pipes[cur].pmode = '\0';
+     return rval;
+ #endif

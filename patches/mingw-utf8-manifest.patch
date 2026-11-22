@@ -1,0 +1,39 @@
+Embed a manifest with UTF-8 as the process code page (Windows 10 1903+):
+gawk reaches argv, file names and its locale through the ANSI APIs, which
+otherwise mangle anything outside the system code page and leave gawk in a
+single-byte locale (length("ação") == 6).
+
+diff -uN a/pc/gawk.manifest b/pc/gawk.manifest
+--- a/pc/gawk.manifest
++++ b/pc/gawk.manifest
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
++<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
++	<application xmlns="urn:schemas-microsoft-com:asm.v3">
++		<windowsSettings>
++			<activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
++		</windowsSettings>
++	</application>
++</assembly>
+diff -uN a/pc/gawk.rc b/pc/gawk.rc
+--- a/pc/gawk.rc
++++ b/pc/gawk.rc
+@@ -0,0 +1,2 @@
++/* 1 = CREATEPROCESS_MANIFEST_RESOURCE_ID, 24 = RT_MANIFEST */
++1 24 "gawk.manifest"
+diff -uN a/pc/Makefile b/pc/Makefile
+--- a/pc/Makefile
++++ b/pc/Makefile
+@@ -159,7 +159,11 @@
+ LIBOBJS= getopt$O getopt1$O dfa$O random$O localeinfo$O regex$O $(DYNOBJS) \
+ 	$(MINRXOBJS)
+ 
+-GAWKOBJS = $(ALLOBJS) $(LIBOBJS)
++GAWKOBJS = $(ALLOBJS) $(LIBOBJS) gawk-rsrc$O
++
++WINDRES = windres
++gawk-rsrc$O: gawk.rc gawk.manifest
++	$(WINDRES) -O coff -i gawk.rc -o $@
+ 
+ # clear out suffixes list
+ # .SUFFIXES:

@@ -57,7 +57,7 @@ The [Releases](https://github.com/unpins/gawk/releases) page has standalone bina
 ## Build notes
 
 - **Aliases:** `unpin install gawk` also creates `awk`.
-- **Windows** uses [Cosmopolitan](https://justine.lol/cosmopolitan/), not mingw: gawk's Windows support lives in a separate `pc/` port (its own `popen`, sockets and header forwards) that the ordinary configure path does not wire in, so a mingw build would mean maintaining a second one.
+- **Windows** is built with gawk's own MinGW port (`pc/`), and runs in UTF-8 whatever the system code page.
 - **Line editing** in the `--debug` prompt (readline) works on every platform.
 - **Persistent memory** (`GAWK_PERSIST_FILE`, see `pm-gawk.1`) is available on 64-bit Linux and macOS; gawk does not build it for 32-bit Linux or Windows.
 - **Not shipped:** `gawkbug` (a shell script for filing bug reports) and the loadable extensions, both outside the single-binary model. `pm-gawk` is not a separate program — it is gawk's persistent-memory mode, and its page is embedded.

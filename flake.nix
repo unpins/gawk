@@ -24,9 +24,7 @@
   # `awk` is an embedded alias (`unpin/aliases`); gawk doesn't switch behaviour
   # on argv[0], so both names invoke the same binary.
   #
-  # Windows goes through Cosmopolitan (./cosmo.nix): gawk's own Windows port
-  # (`pc/`) is not something its configure wires in, so a mingw build would
-  # have to replicate it by hand.
+  # Windows builds upstream's own MinGW port (`pc/`, ./mingw.nix).
   outputs = { self, unpins-lib }:
     unpins-lib.lib.mkStandaloneFlake {
       inherit self;
@@ -36,16 +34,15 @@
       engine = "unpin-llvm";
       multicall = {
         programs = [{ name = "gawk"; aliases = [ "awk" ]; }];
+        windows = true;
         # gawk bakes its own base $out into the default AWKPATH/AWKLIBPATH and
         # the locale dir. None of those directories exist even in the base (it
         # installs no `lib/gawk` and no `share/awk`), so the paths are dead — but
         # Nix still counts them as runtime refs and drags the base build, and
-        # through its compiler wrapper the whole toolchain. Two spellings because
-        # the base is named per platform (`-static-<triple>` natively,
-        # `-x86_64-unknown-cosmo-gnu` for the APE), same as bash and zsh.
-        removeReferences = [ "gawk-static" "gawk-x86_64-unknown-cosmo" ];
+        # through its compiler wrapper the whole toolchain.
+        removeReferences = [ "gawk-static" ];
       };
-      windowsBuild = import ./cosmo.nix { inherit unpins-lib; };
+      windowsBuild = import ./mingw.nix { inherit unpins-lib; };
       smoke = [ "--version" ];
       smokePattern = "GNU Awk";
       build = pkgs:
@@ -67,7 +64,7 @@
             configureFlags =
               (builtins.filter (f: f != "--without-readline") (old.configureFlags or [ ]))
               ++ [ "--with-readline=${readline.dev}" "--disable-extensions" ];
-            # Embedded man set, here and in ./cosmo.nix: gawk + its awk alias +
+            # Embedded man set, here and in ./mingw.nix: gawk + its awk alias +
             # pm-gawk (the PMA persistent-memory feature that page documents,
             # built on 64-bit Linux and macOS only); gawkbug.1 goes because
             # gawkbug isn't shipped.
@@ -81,7 +78,7 @@
               # Drop gawkbug.1 — gawkbug isn't shipped. gawk is multi-output, so
               # the pages live in the `man` output (where withMan harvests),
               # not $out. Keeps the embedded set at gawk + awk + pm-gawk, the
-              # same set the cosmo build harvests for the .exe.
+              # same set ./mingw.nix installs for the .exe.
               rm -f "$man/share/man/man1/gawkbug.1"* "$out/share/man/man1/gawkbug.1"*
             '';
           });
