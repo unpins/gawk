@@ -25,10 +25,20 @@ unpin install gawk
 
 `unpin install gawk` also creates an `awk` command.
 
+### Extensions
+
+The extensions that come with gawk are built in, so `@load` needs nothing on
+disk: `filefuncs`, `fnmatch`, `fork`, `inplace`, `intdiv`, `ordchr`,
+`readdir`, `readfile`, `revoutput`, `revtwoway`, `rwarray` and `time`.
+
+```bash
+unpin gawk '@load "readdir"; {print $2}' FS=/ .
+```
+
+`fork` is not available on Windows.
+
 ### What is not included
 
-- **Loadable extensions** (`@load "filefuncs"`, `@load "readdir"`, …) are not
-  available. If you depend on them, use your distribution's gawk.
 - **Arbitrary-precision arithmetic** (`-M`/`--bignum`) is not available:
   nixpkgs builds gawk without MPFR.
 - **The awklib helper scripts** (`passwd.awk`, `group.awk`, `ftrans.awk`, …) and
@@ -39,7 +49,7 @@ multidimensional arrays, `length(array)`, …) — is otherwise complete.
 
 ## Man pages
 
-`gawk.1` (and its `awk` alias) plus `pm-gawk.1` (the persistent-memory feature, on 64-bit Linux and macOS) are embedded in the binary — read with `unpin man gawk`. `gawkbug.1` is excluded; the `gawkbug` script isn't shipped.
+`gawk.1` (and its `awk` alias), `pm-gawk.1` (the persistent-memory feature, on 64-bit Linux and macOS) and a page for each extension (`filefuncs.3am`, `readdir.3am`, …) are embedded in the binary — read with `unpin man gawk`, or `unpin man gawk filefuncs` for an extension. `gawkbug.1` is excluded; the `gawkbug` script isn't shipped.
 
 ## Build locally
 
@@ -60,5 +70,5 @@ The [Releases](https://github.com/unpins/gawk/releases) page has standalone bina
 - **Windows** is built with gawk's own MinGW port (`pc/`), and runs in UTF-8 whatever the system code page.
 - **Line editing** in the `--debug` prompt (readline) works on every platform.
 - **Persistent memory** (`GAWK_PERSIST_FILE`, see `pm-gawk.1`) is available on 64-bit Linux and macOS; gawk does not build it for 32-bit Linux or Windows.
-- **Not shipped:** `gawkbug` (a shell script for filing bug reports) and the loadable extensions, both outside the single-binary model. `pm-gawk` is not a separate program — it is gawk's persistent-memory mode, and its page is embedded.
+- **Not shipped:** `gawkbug`, a shell script for filing bug reports. `pm-gawk` is not a separate program — it is gawk's persistent-memory mode, and its page is embedded.
 - **Tests:** gawk's `make check` is not run; it shells out to `locale`/`more` and expects a UTF-8 locale, none of which the build sandbox has.

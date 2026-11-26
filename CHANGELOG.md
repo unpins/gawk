@@ -5,6 +5,9 @@
 ### Added
 
 - Line editing and history in the `--debug` prompt on Windows.
+- The extensions that come with gawk work: `@load "filefuncs"`,
+  `@load "readdir"`, `-l time` and the rest load from the binary itself.
+  `fork` is not available on Windows.
 
 ### Changed
 
