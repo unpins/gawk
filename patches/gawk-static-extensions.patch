@@ -1,0 +1,177 @@
+Link gawk's C extensions into the binary.
+
+With GAWK_STATIC_EXTENSIONS each extension's dl_load gets its own name
+(gawk_static_ext_<module>), the build lists them in static-ext.h and
+links their objects through GAWK_STATIC_EXT_OBJS, and @load / -l find them
+in a built-in table before searching AWKLIBPATH or calling dlopen.
+
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -116,6 +116,9 @@
+ 	$(LIBSIGSEGV) $(LIBINTL) $(SOCKET_LIBS) $(LIBREADLINE) $(LIBMPFR) \
+ 	$(LDFLAGS)
+ 
++# Extensions linked into gawk (GAWK_STATIC_EXTENSIONS); set by the build.
++gawk_LDADD = $(LDADD) $(GAWK_STATIC_EXT_OBJS)
++
+ # Directory for gawk's data files. Automake supplies datadir.
+ pkgdatadir = $(datadir)/awk
+ 
+--- a/awk.h
++++ b/awk.h
+@@ -1628,6 +1628,7 @@
+ /* ext.c */
+ extern NODE *do_ext(int nargs);
+ void load_ext(const char *name, const char *lib_name);
++bool static_ext_known(const char *name);
+ extern void init_extension_list(void);
+ extern void close_extensions(void);
+ extern bool is_valid_identifier(const char *name);
+--- a/ext.c
++++ b/ext.c
+@@ -83,6 +83,53 @@
+ 
+ #define INIT_FUNC	"dl_load"
+ 
++#ifdef GAWK_STATIC_EXTENSIONS
++/* static-ext.h, written by the build: GAWK_STATIC_EXT("name", token) */
++#define GAWK_STATIC_EXT(name, token) \
++	extern int gawk_static_ext_##token(const gawk_api_t *const, awk_ext_id_t);
++#include "static-ext.h"
++#undef GAWK_STATIC_EXT
++
++static struct static_ext {
++	const char *name;
++	int (*load)(const gawk_api_t *const, awk_ext_id_t);
++	bool loaded;
++} static_exts[] = {
++#define GAWK_STATIC_EXT(name, token) { name, gawk_static_ext_##token, false },
++#include "static-ext.h"
++#undef GAWK_STATIC_EXT
++};
++
++/* static_ext_find --- built-in extension by @load name, with or without suffix */
++
++static struct static_ext *
++static_ext_find(const char *name)
++{
++	size_t i, n = strlen(name);
++	size_t sl = strlen("." SHLIBEXT);
++
++	if (n > sl && strcmp(name + n - sl, "." SHLIBEXT) == 0)
++		n -= sl;
++	for (i = 0; i < sizeof(static_exts) / sizeof(static_exts[0]); i++)
++		if (strlen(static_exts[i].name) == n
++		    && strncmp(static_exts[i].name, name, n) == 0)
++			return & static_exts[i];
++	return NULL;
++}
++
++bool
++static_ext_known(const char *name)
++{
++	return static_ext_find(name) != NULL;
++}
++#else
++bool
++static_ext_known(const char *name)
++{
++	return false;
++}
++#endif
++
+ /* load_ext --- load an external library */
+ 
+ void
+@@ -106,6 +153,22 @@
+ 	if (lib_name == NULL)
+ 		fatal(_("load_ext: received NULL lib_name"));
+ 
++#ifdef GAWK_STATIC_EXTENSIONS
++	{
++		struct static_ext *se = static_ext_find(name);
++
++		if (se != NULL) {
++			if (se->loaded)
++				return;
++			se->loaded = true;
++			if (se->load(& api_impl, NULL) == 0)
++				warning(_("load_ext: library `%s' initialization routine `%s' failed"),
++						name, INIT_FUNC);
++			return;
++		}
++	}
++#endif
++
+ 	if ((dl = dlopen(lib_name, flags)) == NULL)
+ 		fatal(_("load_ext: cannot open library `%s': %s"), lib_name,
+ 		      dlerror());
+@@ -290,6 +353,12 @@
+ {
+ }
+ 
++bool
++static_ext_known(const char *name)
++{
++	return false;
++}
++
+ /* load_ext --- dummy version if extensions not available */
+ 
+ void
+--- a/extension/stack.h
++++ b/extension/stack.h
+@@ -22,6 +22,14 @@
+  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
+ 
++/* linked into gawk: keep clear of gawk's own stack_top */
++#ifdef GAWK_STATIC_EXTENSIONS
++#define stack_empty gawk_ext_stack_empty
++#define stack_top gawk_ext_stack_top
++#define stack_pop gawk_ext_stack_pop
++#define stack_push gawk_ext_stack_push
++#endif
++
+ extern int stack_empty();	/* return true if stack is empty */
+ extern void *stack_top();	/* return top object on the stack */
+ extern void *stack_pop();	/* pop top object and return it */
+--- a/gawkapi.h
++++ b/gawkapi.h
+@@ -1151,8 +1151,21 @@
+ dl_load_func(func_table, some_name, "name_space_in_quotes")
+ #endif
+ 
++/*
++ * GAWK_STATIC_EXTENSIONS: the extension is linked into gawk, so each one
++ * needs its own name for dl_load (ext.c finds it in a built-in table).
++ */
++#ifdef GAWK_STATIC_EXTENSIONS
++#define GAWK_EXT_LOAD(extension) gawk_static_ext_##extension
++#ifndef GAWK
++#define plugin_is_GPL_compatible __attribute__((weak)) gawk_static_ext_plugin_is_GPL_compatible
++#endif
++#else
++#define GAWK_EXT_LOAD(extension) dl_load
++#endif
++
+ #define dl_load_func(func_table, extension, name_space) \
+-int dl_load(const gawk_api_t *const api_p, awk_ext_id_t id)  \
++int GAWK_EXT_LOAD(extension)(const gawk_api_t *const api_p, awk_ext_id_t id)  \
+ { \
+ 	size_t i, j; \
+ 	int errors = 0; \
+--- a/io.c
++++ b/io.c
+@@ -3095,6 +3095,11 @@
+ 	*errcode = 0;
+ 	if (src == NULL || *src == '\0')
+ 		return NULL;
++	/* built-in extension: nothing to find on disk */
++	if (is_extlib && static_ext_known(src)) {
++		memset(stb, 0, sizeof(*stb));
++		return estrdup(src, strlen(src));
++	}
+ 	path = do_find_source(src, stb, errcode, pi);
+ 
+ 	if (path == NULL && is_extlib) {

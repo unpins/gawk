@@ -8,19 +8,11 @@
 
   inputs.unpins-lib.url = "github:unpins/nix-lib";
 
-  # pkgsStatic.gawk ships:
-  #   bin/gawk       — the ELF, ~900 KB stripped
-  #   bin/awk → gawk — symlink
-  #   libexec/awk/{grcat,pwcat} — small helpers invoked by the awklib library
-  #                               scripts in share/awk
-  #   share/awk/*.awk — library scripts (passwd.awk, group.awk, ftrans.awk, …)
-  #   lib/gawk/*.a    — extension modules (filefuncs, readdir, time, …) built
-  #                     as static archives because pkgsStatic blocks shared
-  #                     libs. They are dead weight: gawk can only `@load` a
-  #                     shared module, never a .a.
-  #
-  # `--disable-extensions` skips the extension/ subbuild entirely. We then
-  # drop libexec/ and share/awk so the published artifact is gawk-only.
+  # pkgsStatic.gawk ships bin/gawk plus libexec/awk/{grcat,pwcat} and the
+  # share/awk library scripts, both dropped here. Its C extensions (filefuncs,
+  # readdir, time, …) come out as static archives gawk could never `@load`;
+  # here they are linked into the binary instead (./static-ext.nix,
+  # patches/gawk-static-extensions.patch) and `@load "name"` finds them there.
   # `awk` is an embedded alias (`unpin/aliases`); gawk doesn't switch behaviour
   # on argv[0], so both names invoke the same binary.
   #
@@ -61,9 +53,39 @@
             # explicit here so the judgment is recorded).
             doCheck = false;
             buildInputs = (old.buildInputs or [ ]) ++ [ readline ];
+            patches = (old.patches or [ ]) ++ [ ./patches/gawk-static-extensions.patch ];
             configureFlags =
               (builtins.filter (f: f != "--without-readline") (old.configureFlags or [ ]))
-              ++ [ "--with-readline=${readline.dev}" "--disable-extensions" ];
+              ++ [ "--with-readline=${readline.dev}" "CPPFLAGS=-DGAWK_STATIC_EXTENSIONS" ];
+            # The C extensions (@load "filefuncs", …) are linked in: every
+            # module upstream installs; testext is upstream's own test.
+            preBuild = (old.preBuild or "") + import ./static-ext.nix {
+              # extension/config.h, from the extension/ sub-configure
+              cflags = "-Iextension";
+              modules = {
+                filefuncs.srcs = [ "extension/stack.c" "extension/gawkfts.c" ];
+                fnmatch = { }; fork = { }; inplace = { }; intdiv = { }; ordchr = { };
+                readdir = { }; readfile = { }; revoutput = { }; revtwoway = { };
+                rwarray = { }; time = { };
+              };
+            };
+            # Every linked-in extension answers @load and registers its functions.
+            doInstallCheck = with pkgs.pkgsStatic.stdenv; buildPlatform.canExecute hostPlatform;
+            installCheckPhase = ''
+              runHook preInstallCheck
+              $out/bin/gawk '
+                @load "filefuncs"; @load "fnmatch"; @load "fork"; @load "inplace"
+                @load "intdiv"; @load "ordchr"; @load "readdir"; @load "readfile"
+                @load "revoutput"; @load "revtwoway"; @load "rwarray"; @load "time"
+                BEGIN {
+                  n = split("stat fts fnmatch fork inplace::begin intdiv ord chr " \
+                            "readfile writea reada gettimeofday sleep", f, " ")
+                  for (i = 1; i <= n; i++)
+                    if (!(f[i] in FUNCTAB)) { print "missing: " f[i]; bad = 1 }
+                  exit bad
+                }'
+              runHook postInstallCheck
+            '';
             # Embedded man set, here and in ./mingw.nix: gawk + its awk alias +
             # pm-gawk (the PMA persistent-memory feature that page documents,
             # built on 64-bit Linux and macOS only); gawkbug.1 goes because
