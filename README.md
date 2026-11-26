@@ -37,12 +37,25 @@ unpin gawk '@load "readdir"; {print $2}' FS=/ .
 
 `fork` is not available on Windows.
 
+### Libraries
+
+gawk's library of awk functions is built in too, so `@include` and `-i` find
+`getopt`, `join`, `assert`, `ord`, `strtonum`, `walkarray` and the rest of
+the set gawk installs, with nothing on disk:
+
+```bash
+unpin gawk -i join 'BEGIN { split("a b c", x); print join(x, 1, 3, "-") }'
+```
+
+`-i inplace` edits files in place. A directory in `AWKPATH` is searched as
+usual, ahead of the built-in libraries.
+
 ### What is not included
 
 - **Arbitrary-precision arithmetic** (`-M`/`--bignum`) is not available:
   nixpkgs builds gawk without MPFR.
-- **The awklib helper scripts** (`passwd.awk`, `group.awk`, `ftrans.awk`, …) and
-  the `grcat`/`pwcat` helpers are not included.
+- **`passwd.awk`, `group.awk` and `ns_passwd.awk`** are not included, nor the
+  `pwcat`/`grcat` helpers they run to list the user and group databases.
 
 The AWK language itself — POSIX plus the GNU extensions (`gensub`,
 multidimensional arrays, `length(array)`, …) — is otherwise complete.

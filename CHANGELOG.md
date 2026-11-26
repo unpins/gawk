@@ -8,6 +8,9 @@
 - The extensions that come with gawk work: `@load "filefuncs"`,
   `@load "readdir"`, `-l time` and the rest load from the binary itself.
   `fork` is not available on Windows.
+- gawk's library of awk functions is built in: `@include "getopt"`,
+  `-i join`, `-i inplace` and the rest work with nothing on disk, also when
+  `AWKPATH` is set.
 
 ### Changed
 
