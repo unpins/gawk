@@ -8,6 +8,7 @@ let
   cross = pkgs.pkgsCross.mingwW64;
   prefix = cross.stdenv.hostPlatform.config;
   mg = unpins-lib.lib.mingwStaticCross pkgs;
+  awklib = import ./awklib.nix { inherit unpins-lib; };
   readline = mg.readline.overrideAttrs (o: {
     # Same as bc: readline's mingw build leaves `PC` undefined unless asked.
     env = o.env // { CFLAGS = o.env.CFLAGS + " -DNEED_EXTERN_PC"; };
@@ -34,7 +35,7 @@ cross.stdenv.mkDerivation {
   dontConfigure = true;
   # A UCRT-configured mingw gcc predefines _UCRT, and pc/mbc32.h tests it before
   # any system header could; clang leaves it to _mingw.h, too late for that test.
-  env.NIX_CFLAGS_COMPILE = "-D_UCRT -DGAWK_STATIC_EXTENSIONS";
+  env.NIX_CFLAGS_COMPILE = "-D_UCRT -DGAWK_STATIC_EXTENSIONS ${awklib.cflag}";
   # The target links -lreadline alone (a DLL carries its own deps); the static
   # archive needs readline's termcap after it.
   env.NIX_LDFLAGS = "-ltermcap";
@@ -43,6 +44,7 @@ cross.stdenv.mkDerivation {
     ./patches/mingw-popen.patch
     ./patches/mingw-utf8-manifest.patch
     ./patches/gawk-static-extensions.patch
+    ./patches/gawk-awklib-vfs.patch
   ];
 
   postPatch = ''
@@ -52,7 +54,7 @@ cross.stdenv.mkDerivation {
   preBuild = import ./static-ext.nix {
     cflags = "-D__USE_MINGW_ANSI_STDIO";
     modules = extensions;
-  };
+  } + awklib.vfsObjects true;
 
   buildPhase = ''
     runHook preBuild

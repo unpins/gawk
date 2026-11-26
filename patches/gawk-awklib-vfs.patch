@@ -1,0 +1,127 @@
+Read @include / -i libraries from the binary's embedded share/awk tree.
+
+UNPIN_AWKLIB_DIR (set by the build) is the mount: it ends every AWKPATH,
+the default one being "." and nothing else, so the embedded libraries are
+found even when the user sets AWKPATH and a library of theirs still wins.
+The library search (do_find_source) stats through unpin-vfs, and srcopen
+opens an embedded library through it; a program file given with -f stays
+on gawk's own devopen. Embedded files all stat with inode 0, so
+files_are_same compares their names to tell two libraries apart.
+
+--- a/io.c
++++ b/io.c
+@@ -2986,14 +2986,20 @@
+ 	pi->max_pathlen = 0;
+ 	if ((path = getenv(pi->envname)) == NULL || *path == '\0')
+ 		path = pi->dfltp[0];
++#ifdef UNPIN_AWKLIB_DIR
++	/* the embedded libraries end every AWKPATH; by default after "." alone */
++	if (pi->dfltp == & defpath && path == defpath)
++		path = ".";
++#endif
+ 
+ 	/* count number of separators */
+ 	for (max_path = 0, p = (char *) path; *p; p++)
+ 		if (*p == envsep)
+ 			max_path++;
+ 
+-	// +3 --> 2 for null entries at front and end of path, 1 for NULL end of list
+-	ezalloc(pi->awkpath, const char **, (max_path + 3) * sizeof(char *));
++	// +4 --> 2 for null entries at front and end of path, 1 for the embedded
++	// libraries, 1 for NULL end of list
++	ezalloc(pi->awkpath, const char **, (max_path + 4) * sizeof(char *));
+ 
+ 	start = path;
+ 	i = 0;
+@@ -3040,9 +3046,21 @@
+ 		}
+ 	}
+ 
++#ifdef UNPIN_AWKLIB_DIR
++	if (pi->dfltp == & defpath) {
++		pi->awkpath[i++] = UNPIN_AWKLIB_DIR "/";
++		if ((int) sizeof(UNPIN_AWKLIB_DIR) > pi->max_pathlen)
++			pi->max_pathlen = sizeof(UNPIN_AWKLIB_DIR);
++	}
++#endif
+ 	pi->awkpath[i] = NULL;
+ }
+ 
++/* the embedded share/awk tree (unpin-vfs) */
++extern int unpin_vfs_is_virtual(const char *path);
++extern int unpin_vfs_open(const char *path, int flags, ...);
++extern int unpin_vfs_stat(const char *path, struct stat *st);
++
+ /* do_find_source --- search $AWKPATH for file, return NULL if not found */
+ 
+ static char *
+@@ -3057,7 +3075,7 @@
+ 	if (ispath(src)) {
+ 		emalloc(path, char *, strlen(src) + 1);
+ 		strcpy(path, src);
+-		if (stat(path, stb) == 0)
++		if (unpin_vfs_stat(path, stb) == 0)
+ 			return path;
+ 		*errcode = errno;
+ 		efree(path);
+@@ -3074,7 +3092,7 @@
+ 		else
+ 			strcpy(path, pi->awkpath[i]);
+ 		strcat(path, src);
+-		if (stat(path, stb) == 0)
++		if (unpin_vfs_stat(path, stb) == 0)
+ 			return path;
+ 	}
+ 
+@@ -3171,6 +3189,9 @@
+ 
+ 	if (s->stype == SRC_STDIN)
+ 		fd = fileno(stdin);
++	else if ((s->stype == SRC_INC || s->stype == SRC_NSINC)
++		 && unpin_vfs_is_virtual(s->fullpath))
++		fd = unpin_vfs_open(s->fullpath, O_RDONLY);
+ 	else if (s->stype == SRC_FILE || s->stype == SRC_INC || s->stype == SRC_NSINC)
+ 		fd = devopen(s->fullpath, "r");
+ 
+--- a/pc/gawkmisc.pc
++++ b/pc/gawkmisc.pc
+@@ -252,6 +252,8 @@
+  
+ /* files_are_same --- return true if files are identical */
+ 
++extern int unpin_vfs_is_virtual(const char *path);
++
+ int
+ files_are_same(char *path, SRCFILE *src)
+ {
+@@ -259,6 +261,10 @@
+ 	size_t pathlen;
+ 	char *p, *s;
+ 
++	/* embedded files all stat with inode 0: the name is the identity */
++	if (unpin_vfs_is_virtual(path) || unpin_vfs_is_virtual(src->fullpath))
++		return strcmp(path, src->fullpath) == 0;
++
+ 	if (stat (path, & st) == 0) {
+ 		/* If they have a working `stat', honor that.  */
+ 		if (!(st.st_dev == src->sbuf.st_dev
+--- a/posix/gawkmisc.c
++++ b/posix/gawkmisc.c
+@@ -304,11 +304,17 @@
+ 
+ /* files_are_same --- return true if files are identical */
+ 
++extern int unpin_vfs_is_virtual(const char *path);
++
+ int
+ files_are_same(char *path, SRCFILE *src)
+ {
+ 	struct stat st;
+ 
++	/* embedded files all stat with inode 0: the name is the identity */
++	if (unpin_vfs_is_virtual(path) || unpin_vfs_is_virtual(src->fullpath))
++		return strcmp(path, src->fullpath) == 0;
++
+ 	return (stat(path, & st) == 0
+ 		&& st.st_dev == src->sbuf.st_dev
+ 		&& st.st_ino == src->sbuf.st_ino);
